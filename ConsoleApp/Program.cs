@@ -14,12 +14,12 @@ namespace ConsoleApp
             Console.Write("Enter Username (e.g., postgres): ");
             string username = Console.ReadLine();
             Console.Write("Enter Password: ");
-            string password = Console.ReadLine();
+            string password = ManagementService.ReadPassword();
             string connectionString = $"Host={host}; Username={username}; Password={password}";
-            var exit = true;
             string newDatabaseName = "NewpDatabase";
             string newDbConnectionString = $"Host={host}; Database={newDatabaseName}; Username={username}; Password={password}";
-            Console.WriteLine("Connection string created: " + connectionString);
+            
+            Console.WriteLine("\nConnection string created: " + connectionString);
             ManagementService.CreateDatabase(connectionString, newDatabaseName);
             Console.WriteLine("Press any button to continue...");
             Console.ReadKey();
