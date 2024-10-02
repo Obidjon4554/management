@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using ClassLibrary;
 
 namespace ConsoleApp
 {
     public static class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             List<Table> tables = new List<Table>();
             Console.Write("Enter Host (e.g., localhost): ");
@@ -16,11 +17,11 @@ namespace ConsoleApp
             Console.Write("Enter Password: ");
             string password = ManagementService.ReadPassword();
             string connectionString = $"Host={host}; Username={username}; Password={password}";
-            string newDatabaseName = "NewpDatabase";
+            string newDatabaseName = "NewDatabase";
             string newDbConnectionString = $"Host={host}; Database={newDatabaseName}; Username={username}; Password={password}";
-            
+
             Console.WriteLine("\nConnection string created: " + connectionString);
-            ManagementService.CreateDatabase(connectionString, newDatabaseName);
+             await  ManagementService.CreateDatabaseAsync(connectionString, newDatabaseName);
             Console.WriteLine("Press any button to continue...");
             Console.ReadKey();
 
@@ -38,25 +39,25 @@ namespace ConsoleApp
             switch (temp)
             {
                 case 1:
-                    ManagementService.CreateTable(newDbConnectionString, tables);
+                    await ManagementService.CreateTableAsync(newDbConnectionString, tables);
                     Console.WriteLine("Press any button to continue...");
                     Console.ReadKey();
                     goto Menu;
 
                 case 2:
-                    ManagementService.SelectTable(newDbConnectionString, tables);
+                    await ManagementService.SelectTableAsync(newDbConnectionString, tables);
                     Console.WriteLine("Press any button to continue...");
                     Console.ReadKey();
                     goto Menu;
 
                 case 3:
-                    ManagementService.UpdateTable(newDbConnectionString, tables);
+                    await ManagementService.UpdateTableAsync(newDbConnectionString, tables);
                     Console.WriteLine("Press any button to continue...");
                     Console.ReadKey();
                     goto Menu;
 
                 case 4:
-                    ManagementService.DeleteTable(newDbConnectionString, tables);
+                    await ManagementService.DeleteTableAsync(newDbConnectionString, tables);
                     Console.WriteLine("Press any button to continue...");
                     Console.ReadKey();
                     goto Menu;

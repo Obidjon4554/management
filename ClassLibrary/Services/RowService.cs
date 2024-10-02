@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Npgsql;
 
 namespace ClassLibrary
 {
     public static partial class ManagementService
     {
-        public static void ManageRowsMenu(NpgsqlConnection con, string tableName)
+        public static async Task ManageRowsMenuAsync(NpgsqlConnection con, string tableName)
         {
             while (true)
             {
@@ -30,22 +31,22 @@ namespace ClassLibrary
                 switch (option)
                 {
                     case 1:
-                        AddRowToTable(con, tableName);
+                        await AddRowToTableAsync(con, tableName);
                         Console.WriteLine("Press any key to return...");
                         Console.ReadKey();
                         break;
                     case 2:
-                        ViewRowsFromTable(con, tableName);
+                        await ViewRowsFromTableAsync(con, tableName);
                         Console.WriteLine("Press any key to return...");
                         Console.ReadKey();
                         break;
                     case 3:
-                        UpdateRowInTable(con, tableName);
+                      await  UpdateRowInTableAsync(con, tableName);
                         Console.WriteLine("Press any key to return...");
                         Console.ReadKey();
                         break;
                     case 4:
-                        DeleteRowFromTable(con, tableName);
+                      await  DeleteRowFromTableAsync(con, tableName);
                         Console.WriteLine("Press any key to return...");
                         Console.ReadKey();
                         break;
@@ -55,7 +56,7 @@ namespace ClassLibrary
             }
         }
 
-        public static void AddRowToTable(NpgsqlConnection con, string tableName)
+        public static async Task AddRowToTableAsync(NpgsqlConnection con, string tableName)
         {
             Console.Clear();
             Console.WriteLine($"Adding a new row to {tableName}");
@@ -86,13 +87,13 @@ namespace ClassLibrary
                     cmd.Parameters.AddWithValue($"@{columns[i]}", values[i]);
                 }
 
-                cmd.ExecuteNonQuery();
+              await  cmd.ExecuteNonQueryAsync();
             }
 
             Console.WriteLine("Row added successfully!");
         }
 
-        public static void ViewRowsFromTable(NpgsqlConnection con, string tableName)
+        public static async Task ViewRowsFromTableAsync(NpgsqlConnection con, string tableName)
         {
             Console.Clear();
             Console.WriteLine($"Viewing rows in {tableName}");
@@ -101,7 +102,7 @@ namespace ClassLibrary
 
             using (var cmd = new NpgsqlCommand($"SELECT * FROM {tableName}", con))
             {
-                using (var reader = cmd.ExecuteReader())
+                using (var reader = await cmd.ExecuteReaderAsync())
                 {
                     for (int i = 0; i < reader.FieldCount; i++)
                     {
@@ -110,7 +111,7 @@ namespace ClassLibrary
                     Console.WriteLine();
                     Console.WriteLine("--------------------------------------------------");
 
-                    while (reader.Read())
+                    while (await reader.ReadAsync())
                     {
                         for (int i = 0; i < reader.FieldCount; i++)
                         {
@@ -125,18 +126,18 @@ namespace ClassLibrary
 
         }
 
-        public static void UpdateRowInTable(NpgsqlConnection con, string tableName)
+        public static async Task UpdateRowInTableAsync(NpgsqlConnection con, string tableName)
         {
             Console.Clear();
             var rows = new List<Dictionary<string, object>>();
 
             using (var cmd = new NpgsqlCommand($"SELECT * FROM {tableName}", con))
             {
-                using (var reader = cmd.ExecuteReader())
+                using (var reader = await cmd.ExecuteReaderAsync())
                 {
                     Console.WriteLine("Rows:");
                     Console.WriteLine("--------------------------------------------------");
-                    while (reader.Read())
+                    while (await reader.ReadAsync())
                     {
                         var row = new Dictionary<string, object>();
                         for (int i = 0; i < reader.FieldCount; i++)
@@ -202,18 +203,18 @@ namespace ClassLibrary
             {
                 cmd.Parameters.AddWithValue("@newValue", newValue);
                 cmd.Parameters.AddWithValue("@id", rowId);
-                cmd.ExecuteNonQuery();
+                await cmd.ExecuteReaderAsync();
             }
 
             Console.WriteLine("Row updated successfully!");
         }
 
-        public static void DeleteRowFromTable(NpgsqlConnection con, string tableName)
+        public static async Task DeleteRowFromTableAsync(NpgsqlConnection con, string tableName)
         {
             Console.Clear();
             Console.WriteLine($"Deleting a row from {tableName}");
 
-            ViewRowsFromTable(con, tableName);
+           await ViewRowsFromTableAsync(con, tableName);
 
             Console.Write("Enter the ID of the row you want to delete: ");
             if (!int.TryParse(Console.ReadLine(), out int idToDelete))
@@ -227,7 +228,7 @@ namespace ClassLibrary
             using (var cmd = new NpgsqlCommand(deleteCmd, con))
             {
                 cmd.Parameters.AddWithValue("@id", idToDelete);
-                cmd.ExecuteNonQuery();
+                await cmd.ExecuteReaderAsync();
             }
 
             Console.WriteLine("Row deleted successfully!");

@@ -1,17 +1,18 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Npgsql;
 
 namespace ClassLibrary
 {
     public static partial class ManagementService
     {
-        public static void CreateDatabase(string connectionString, string newDatabaseName)
+        public static async Task CreateDatabaseAsync(string connectionString, string newDatabaseName)
         {
             using (var con = new NpgsqlConnection(connectionString))
             {
-                con.Open();
+                await con.OpenAsync();
                 var checkDbCmd = new NpgsqlCommand($"SELECT 1 FROM pg_database WHERE datname = '{newDatabaseName}'", con);
-                var exists = checkDbCmd.ExecuteScalar();
+                var exists = await checkDbCmd.ExecuteScalarAsync();
 
                 if (exists != null)
                 {
@@ -22,7 +23,7 @@ namespace ClassLibrary
                     Console.WriteLine("Press any button to Create new Database automatically");
                     Console.ReadKey();
                     var createDbCmd = new NpgsqlCommand($"CREATE DATABASE \"{newDatabaseName}\"", con);
-                    createDbCmd.ExecuteNonQuery();
+                    await createDbCmd.ExecuteNonQueryAsync();
                     Console.WriteLine($"Database '{newDatabaseName}' created successfully.");
                 }
                 con.Close();
