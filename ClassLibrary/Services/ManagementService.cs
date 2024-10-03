@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using Dapper;
 using Npgsql;
 
 namespace ClassLibrary
@@ -11,24 +13,26 @@ namespace ClassLibrary
             using (var con = new NpgsqlConnection(connectionString))
             {
                 await con.OpenAsync();
-                var checkDbCmd = new NpgsqlCommand($"SELECT 1 FROM pg_database WHERE datname = '{newDatabaseName}'", con);
-                var exists = await checkDbCmd.ExecuteScalarAsync();
+
+                string checkDbQuery = "SELECT 1 FROM pg_database WHERE datname = @DatabaseName";
+                var exists = await con.QuerySingleOrDefaultAsync<int?>(checkDbQuery, new { DatabaseName = newDatabaseName });
 
                 if (exists != null)
                 {
-                    Console.WriteLine($"Database '{newDatabaseName}' already exists");
+                    Console.WriteLine($"Database '{newDatabaseName}' already exists.");
                 }
                 else
                 {
-                    Console.WriteLine("Press any button to Create new Database automatically");
+                    Console.WriteLine("Press any button to create a new database.");
                     Console.ReadKey();
-                    var createDbCmd = new NpgsqlCommand($"CREATE DATABASE \"{newDatabaseName}\"", con);
-                    await createDbCmd.ExecuteNonQueryAsync();
+
+                    string createDbQuery = $"CREATE DATABASE \"{newDatabaseName}\"";
+                    await con.ExecuteAsync(createDbQuery);
                     Console.WriteLine($"Database '{newDatabaseName}' created successfully.");
                 }
-                con.Close();
             }
         }
+
         public static string ReadPassword()
         {
             string password = string.Empty;
@@ -55,5 +59,6 @@ namespace ClassLibrary
         }
 
 
+        
     }
 }

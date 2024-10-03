@@ -21,61 +21,49 @@ namespace ConsoleApp
             string newDbConnectionString = $"Host={host}; Database={newDatabaseName}; Username={username}; Password={password}";
 
             Console.WriteLine("\nConnection string created: " + connectionString);
-             await  ManagementService.CreateDatabaseAsync(connectionString, newDatabaseName);
+            await ManagementService.CreateDatabaseAsync(connectionString, newDatabaseName);
             Console.WriteLine("Press any button to continue...");
             Console.ReadKey();
 
-        Menu:
+        MainMenu:
             Console.Clear();
-            Console.WriteLine("WELCOME");
-            Console.WriteLine("1. Create Table");
-            Console.WriteLine("2. Select Table");
-            Console.WriteLine("3. Update Table");
-            Console.WriteLine("4. Delete Table");
-            Console.WriteLine("5. Exit");
+            Console.WriteLine("WELCOME TO YOUR DATABASE");
+            Console.WriteLine("1. Manage Tables");
+            Console.WriteLine("2. Manage Columns");
+            Console.WriteLine("3. Manage Rows");
+            Console.WriteLine("4. Exit");
             Console.Write("Choose an option: ");
-            var temp = int.Parse(Console.ReadLine());
+            var option = int.Parse(Console.ReadLine());
 
-            switch (temp)
+            switch (option)
             {
                 case 1:
-                    await ManagementService.CreateTableAsync(newDbConnectionString, tables);
-                    Console.WriteLine("Press any button to continue...");
-                    Console.ReadKey();
-                    goto Menu;
+                    await TableMenu(newDbConnectionString, tables);
+                    goto MainMenu;
 
                 case 2:
-                    await ManagementService.SelectTableAsync(newDbConnectionString, tables);
-                    Console.WriteLine("Press any button to continue...");
-                    Console.ReadKey();
-                    goto Menu;
+                    await ManagementService.ManageColumnsMenu(newDbConnectionString, tables);
+                    goto MainMenu;
 
                 case 3:
-                    await ManagementService.UpdateTableAsync(newDbConnectionString, tables);
-                    Console.WriteLine("Press any button to continue...");
-                    Console.ReadKey();
-                    goto Menu;
+                    await ManagementService.ManageRowsMenu(newDbConnectionString, tables);
+                    goto MainMenu;
 
                 case 4:
-                    await ManagementService.DeleteTableAsync(newDbConnectionString, tables);
-                    Console.WriteLine("Press any button to continue...");
-                    Console.ReadKey();
-                    goto Menu;
-
-                case 5:
                     goto Exit;
 
                 default:
-                    Console.WriteLine("Error 404");
-                    Console.WriteLine("Press any button to continue...");
+                    Console.WriteLine("Invalid option. Please choose again.");
                     Console.ReadKey();
-                    goto Menu;
+                    goto MainMenu;
             }
 
         Exit:
-            Console.WriteLine("Press any button to exit...");
+            Console.WriteLine("Exiting...");
             Console.ReadKey();
         }
-    }
 
+
+        
+    }
 }

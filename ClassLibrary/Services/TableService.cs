@@ -1,13 +1,51 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Threading.Tasks;
+using Dapper;
 using Npgsql;
 
 namespace ClassLibrary
 {
     public static partial class ManagementService
     {
+        public static async Task TableMenu(string connectionString, List<Table> tables)
+        {
+            Console.Clear();
+            Console.WriteLine("MANAGE TABLES");
+            Console.WriteLine("1. Create Table");
+            Console.WriteLine("2. Select Table");
+            Console.WriteLine("3. Update Table");
+            Console.WriteLine("4. Delete Table");
+            Console.WriteLine("5. Back to Main Menu");
+            Console.Write("Choose an option: ");
+            var tableOption = int.Parse(Console.ReadLine());
+
+            switch (tableOption)
+            {
+                case 1:
+                    await CreateTableAsync(connectionString, tables);
+                    break;
+
+                case 2:
+                    await SelectTableAsync(connectionString, tables);
+                    break;
+
+                case 3:
+                    await UpdateTableAsync(connectionString, tables);
+                    break;
+
+                case 4:
+                    await DeleteTableAsync(connectionString, tables);
+                    break;
+
+                case 5:
+                    return;
+
+                default:
+                    Console.WriteLine("Invalid option. Please choose again.");
+                    break;
+            }
+        }
         public static async Task CreateTableAsync(string connectionString, List<Table> tables)
         {
             using (var con = new NpgsqlConnection(connectionString))
@@ -23,12 +61,12 @@ namespace ClassLibrary
                     return;
                 }
 
-                var createTable = new NpgsqlCommand($"CREATE TABLE IF NOT EXISTS {newTable}(id SERIAL PRIMARY KEY)", con);
+                string createTableQuery = $"CREATE TABLE IF NOT EXISTS {newTable}(id SERIAL PRIMARY KEY)";
                 int newId = tables.Count + 1;
                 tables.Add(new Table { Id = newId, Name = newTable });
-                await createTable.ExecuteNonQueryAsync();
+
+                await con.ExecuteAsync(createTableQuery);
                 Console.WriteLine($"Table '{newTable}' created successfully.");
-                await con.CloseAsync();
                 await SelectTableAsync(connectionString, tables);
             }
         }
@@ -42,10 +80,10 @@ namespace ClassLibrary
 
                 foreach (var table in tables)
                 {
-                    Console.WriteLine($"Id: {table.Id}, Name {table.Name}");
+                    Console.WriteLine($"Id: {table.Id}, Name: {table.Name}");
                 }
 
-                Console.Write("Choose table ID for the update:");
+                Console.Write("Choose table ID for the update: ");
                 if (!int.TryParse(Console.ReadLine(), out int tableId))
                 {
                     Console.WriteLine("Invalid input. Please enter a valid table ID.");
@@ -79,12 +117,10 @@ namespace ClassLibrary
                     }
                 }
 
-                var updateCmd = new NpgsqlCommand($"ALTER TABLE {tableName} RENAME TO {newTableName};", con);
-                await updateCmd.ExecuteNonQueryAsync();
+                string updateQuery = $"ALTER TABLE {tableName} RENAME TO {newTableName};";
+                await con.ExecuteAsync(updateQuery);
                 tableToUpdate.Name = newTableName;
-                Console.WriteLine("Table updated successfully");
-
-                await con.CloseAsync();
+                Console.WriteLine("Table updated successfully.");
             }
         }
 
@@ -97,7 +133,7 @@ namespace ClassLibrary
 
                 foreach (var table in tables)
                 {
-                    Console.WriteLine($"Id: {table.Id}, Name {table.Name}");
+                    Console.WriteLine($"Id: {table.Id}, Name: {table.Name}");
                 }
 
                 Console.Write("Enter the ID of the Table to delete: ");
@@ -115,11 +151,10 @@ namespace ClassLibrary
                     return;
                 }
 
-                var cmd = new NpgsqlCommand($"DROP TABLE IF EXISTS {tableToDelete.Name}", con);
-                await cmd.ExecuteNonQueryAsync();
-                Console.WriteLine($"Table '{tableToDelete.Name}' deleted successfully.");
+                string deleteQuery = $"DROP TABLE IF EXISTS {tableToDelete.Name}";
+                await con.ExecuteAsync(deleteQuery);
                 tables.Remove(tableToDelete);
-                await con.OpenAsync();
+                Console.WriteLine($"Table '{tableToDelete.Name}' deleted successfully.");
             }
         }
 
@@ -129,18 +164,14 @@ namespace ClassLibrary
             {
                 await con.OpenAsync();
                 tables.Clear();
-                using (var cmd = new NpgsqlCommand("SELECT table_name FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = 'public'", con))
+                string selectQuery = "SELECT table_name FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = 'public'";
+                var tableNames = await con.QueryAsync<string>(selectQuery);
+
+                int count = 0;
+                foreach (var name in tableNames)
                 {
-                    using (var reader = await cmd.ExecuteReaderAsync())
-                    {
-                        int count = 0;
-                        while (await reader.ReadAsync())
-                        {
-                            string name = reader.GetString(0);
-                            count++;
-                            tables.Add(new Table { Id = count, Name = name });
-                        }
-                    }
+                    count++;
+                    tables.Add(new Table { Id = count, Name = name });
                 }
 
                 while (true)
@@ -210,14 +241,10 @@ namespace ClassLibrary
                         Console.ReadKey();
                         break;
                     case 2:
-                        ManageColumnsMenu(con, tableName);
-                        Console.WriteLine("Press any key to return...");
-                        Console.ReadKey();
+                        await ManageColumnsMenu(con, tableName);
                         break;
                     case 3:
                         await ManageRowsMenuAsync(con, tableName);
-                        Console.WriteLine("Press any key to return...");
-                        Console.ReadKey();
                         break;
                     case 4:
                         return;
@@ -228,37 +255,24 @@ namespace ClassLibrary
                 }
             }
         }
+
         public static async Task ViewTableAsync(NpgsqlConnection con, string tableName)
         {
             Console.Clear();
             Console.WriteLine($"Viewing data in {tableName}");
 
-            using (var cmd = new NpgsqlCommand($"SELECT * FROM {tableName}", con))
+            string selectQuery = $"SELECT * FROM {tableName}";
+            var rows = await con.QueryAsync(selectQuery);
+
+            Console.WriteLine("Columns:");
+            foreach (var row in rows)
             {
-                using (var reader = await cmd.ExecuteReaderAsync())
+                foreach (var col in (IDictionary<string, object>)row)
                 {
-                    var schemaTable = await reader.GetSchemaTableAsync();
-                    if (schemaTable != null)
-                    {
-                        Console.WriteLine("Columns:");
-                        foreach (DataRow row in schemaTable.Rows)
-                        {
-                            Console.Write($"{row["ColumnName"]}  ");
-                        }
-                        Console.WriteLine("\n-------------------------------------");
-
-                        while (await reader.ReadAsync())
-                        {
-                            for (int i = 0; i < reader.FieldCount; i++)
-                            {
-                                Console.Write($"{reader[i]}  ");
-                            }
-                            Console.WriteLine();
-                        }
-                    }
+                    Console.Write($"{col.Key}: {col.Value}  ");
                 }
+                Console.WriteLine();
             }
-
         }
     }
 }

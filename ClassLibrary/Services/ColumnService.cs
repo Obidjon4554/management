@@ -1,12 +1,20 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using Dapper;
 using Npgsql;
 
 namespace ClassLibrary
 {
     public static partial class ManagementService
     {
-        public static async void ManageColumnsMenu(NpgsqlConnection con, string tableName)
+        public static async Task ManageColumnsMenu(string connectionString, List<Table> tables)
+        {
+            Console.Clear();
+            Console.WriteLine("MANAGE COLUMNS");
+            await SelectTableAsync(connectionString, tables);
+        }
+        public static async Task ManageColumnsMenu(NpgsqlConnection con, string tableName)
         {
             while (true)
             {
@@ -52,6 +60,7 @@ namespace ClassLibrary
                 }
             }
         }
+
         public static async Task AddColumnToTableAsync(NpgsqlConnection con, string tableName)
         {
             Console.Clear();
@@ -64,10 +73,8 @@ namespace ClassLibrary
             string dataType = Console.ReadLine();
 
             string addColumnCmd = $"ALTER TABLE {tableName} ADD COLUMN {columnName} {dataType}";
-            using (var cmd = new NpgsqlCommand(addColumnCmd, con))
-            {
-                await cmd.ExecuteReaderAsync();
-            }
+
+            await con.ExecuteAsync(addColumnCmd);
 
             Console.WriteLine($"Column '{columnName}' added successfully!");
         }
@@ -77,21 +84,15 @@ namespace ClassLibrary
             Console.Clear();
             Console.WriteLine($"Viewing columns in {tableName}");
 
-            using (var cmd = new NpgsqlCommand($"SELECT column_name, data_type FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = '{tableName}'", con))
-            {
-                using (var reader = await cmd.ExecuteReaderAsync())
-                {
-                    Console.WriteLine("Columns:");
-                    Console.WriteLine("==========================");
-                    while (await reader.ReadAsync())
-                    {
-                        string columnName = reader.GetString(0);
-                        string dataType = reader.GetString(1);
-                        Console.WriteLine($"{columnName} ({dataType})");
-                    }
-                }
-            }
+            string query = $"SELECT column_name, data_type FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = @TableName";
+            var columns = await con.QueryAsync<dynamic>(query, new { TableName = tableName });
 
+            Console.WriteLine("Columns:");
+            Console.WriteLine("==========================");
+            foreach (var column in columns)
+            {
+                Console.WriteLine($"{column.column_name} ({column.data_type})");
+            }
         }
 
         public static async Task UpdateColumnInTableAsync(NpgsqlConnection con, string tableName)
@@ -99,7 +100,7 @@ namespace ClassLibrary
             Console.Clear();
             Console.WriteLine($"Updating a column in {tableName}");
 
-             await ViewColumnsFromTableAsync(con, tableName);
+            await ViewColumnsFromTableAsync(con, tableName);
 
             Console.Write("Enter the column name you want to update: ");
             string oldColumnName = Console.ReadLine();
@@ -110,19 +111,13 @@ namespace ClassLibrary
             Console.Write("Enter the new data type (or press Enter to keep it the same): ");
             string newDataType = Console.ReadLine();
 
-            string updateColumnCmd = $"ALTER TABLE {tableName} RENAME COLUMN {oldColumnName} TO {newColumnName}";
-            using (var cmd = new NpgsqlCommand(updateColumnCmd, con))
-            {
-                await cmd.ExecuteReaderAsync();
-            }
+            string renameColumnCmd = $"ALTER TABLE {tableName} RENAME COLUMN {oldColumnName} TO {newColumnName}";
+            await con.ExecuteAsync(renameColumnCmd);
 
             if (!string.IsNullOrWhiteSpace(newDataType))
             {
                 string alterDataTypeCmd = $"ALTER TABLE {tableName} ALTER COLUMN {newColumnName} TYPE {newDataType}";
-                using (var cmd = new NpgsqlCommand(alterDataTypeCmd, con))
-                {
-                    await cmd.ExecuteReaderAsync();
-                }
+                await con.ExecuteAsync(alterDataTypeCmd);
             }
 
             Console.WriteLine($"Column '{oldColumnName}' updated successfully to '{newColumnName}'!");
@@ -139,13 +134,9 @@ namespace ClassLibrary
             string columnName = Console.ReadLine();
 
             string deleteColumnCmd = $"ALTER TABLE {tableName} DROP COLUMN {columnName}";
-            using (var cmd = new NpgsqlCommand(deleteColumnCmd, con))
-            {
-                await cmd.ExecuteReaderAsync();
-            }
+            await con.ExecuteAsync(deleteColumnCmd);
 
             Console.WriteLine($"Column '{columnName}' deleted successfully!");
         }
-
     }
 }
