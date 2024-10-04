@@ -9,12 +9,13 @@ namespace ClassLibrary
 {
     public static partial class ManagementService
     {
-        public static async Task ManageRowsMenu(string connectionString, List<Table> tables)
+        public static async Task ManageRowsMenuAsync(string connectionString, List<Table> tables)
         {
             Console.Clear();
             Console.WriteLine("MANAGE ROWS");
             await SelectTableForRowAsync(connectionString, tables);
         }
+
         public static async Task ManageRowsMenuAsync(NpgsqlConnection con, string tableName)
         {
             while (true)
@@ -266,7 +267,7 @@ namespace ClassLibrary
                     var selectedTable = tables.Find(c => c.Id == choice);
                     if (selectedTable != null)
                     {
-                        ManageRowsMenuAsync(con, selectedTable.Name);
+                        await ManageRowsMenuAsync(con, selectedTable.Name);
                     }
                     else
                     {

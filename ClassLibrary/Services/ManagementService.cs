@@ -27,6 +27,7 @@ namespace ClassLibrary
 
                     string createDbQuery = $"CREATE DATABASE \"{newDatabaseName}\"";
                     await con.ExecuteAsync(createDbQuery);
+
                     Console.WriteLine($"Database '{newDatabaseName}' created successfully.");
                 }
             }
@@ -57,7 +58,6 @@ namespace ClassLibrary
             return password;
         }
 
-        // checking
         public static async Task<string> GetValidConnectionStringAsync()
         {
             while (true)

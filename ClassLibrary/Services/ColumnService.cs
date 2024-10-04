@@ -8,12 +8,13 @@ namespace ClassLibrary
 {
     public static partial class ManagementService
     {
-        public static async Task ManageColumnsMenu(string connectionString, List<Table> tables)
+        public static async Task ManageColumnsMenuAsync(string connectionString, List<Table> tables)
         {
             Console.Clear();
             Console.WriteLine("MANAGE COLUMNS");
             await SelectTableForColumnAsync(connectionString,tables);
         }
+
         public static async Task ManageColumnsMenuAsync(NpgsqlConnection con, string tableName)
         {
             while (true)
@@ -256,7 +257,7 @@ namespace ClassLibrary
                     var selectedTable = tables.Find(c => c.Id == choice);
                     if (selectedTable != null)
                     {
-                        ManageColumnsMenuAsync(con,selectedTable.Name);
+                        await ManageColumnsMenuAsync(con,selectedTable.Name);
                     }
                     else
                     {

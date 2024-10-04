@@ -9,7 +9,7 @@ namespace ClassLibrary
 {
     public static partial class ManagementService
     {
-        public static async Task TableMenu(string connectionString, List<Table> tables)
+        public static async Task TableMenuAsync(string connectionString, List<Table> tables)
         {
             TableMenu:
             Console.Clear();
