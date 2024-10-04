@@ -13,7 +13,7 @@ namespace ClassLibrary
         {
             Console.Clear();
             Console.WriteLine("MANAGE ROWS");
-            await SelectTableAsync(connectionString, tables);
+            await SelectTableForRowAsync(connectionString, tables);
         }
         public static async Task ManageRowsMenuAsync(NpgsqlConnection con, string tableName)
         {
@@ -132,7 +132,7 @@ namespace ClassLibrary
             Console.Clear();
             var rows = (await con.QueryAsync($"SELECT * FROM {tableName}")).ToList();
 
-            Console.WriteLine("Rows:");
+            Console.WriteLine("\nRows:");
             Console.WriteLine("--------------------------------------------------");
             foreach (var row in rows)
             {
@@ -220,5 +220,62 @@ namespace ClassLibrary
             var columns = (await con.QueryAsync<string>($"SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = @tableName", new { tableName })).ToList();
             return columns;
         }
+
+        public static async Task SelectTableForRowAsync(string connectionString, List<Table> tables)
+        {
+            using (var con = new NpgsqlConnection(connectionString))
+            {
+                await con.OpenAsync();
+                tables.Clear();
+                string selectQuery = "SELECT table_name FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = 'public'";
+                var tableNames = await con.QueryAsync<string>(selectQuery);
+
+                int count = 0;
+                foreach (var name in tableNames)
+                {
+                    count++;
+                    tables.Add(new Table { Id = count, Name = name });
+                }
+
+                while (true)
+                {
+                    Console.Clear();
+                    Console.WriteLine(" List of Tables ");
+                    Console.WriteLine("====================");
+
+                    foreach (var table in tables)
+                    {
+                        Console.WriteLine($"{table.Id}. {table.Name}");
+                    }
+
+                    Console.WriteLine($"{tables.Count + 1}. Back to Main Menu");
+                    Console.Write("Please choose a table by its number: ");
+
+                    if (!int.TryParse(Console.ReadLine(), out int choice) || choice < 1 || choice > tables.Count + 1)
+                    {
+                        Console.WriteLine("Oops! Invalid table number. Please try again.");
+                        Console.ReadKey();
+                        continue;
+                    }
+
+                    if (choice == tables.Count + 1)
+                    {
+                        return;
+                    }
+
+                    var selectedTable = tables.Find(c => c.Id == choice);
+                    if (selectedTable != null)
+                    {
+                        ManageRowsMenuAsync(con, selectedTable.Name);
+                    }
+                    else
+                    {
+                        Console.WriteLine("Oops! Invalid  number. Please try again.");
+                        Console.ReadKey();
+                    }
+                }
+            }
+        }
+
     }
 }

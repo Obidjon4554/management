@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Dapper;
 using Npgsql;
@@ -58,7 +57,67 @@ namespace ClassLibrary
             return password;
         }
 
+        // checking
+        public static async Task<string> GetValidConnectionStringAsync()
+        {
+            while (true)
+            {
+                Console.Write("Enter Host (e.g., localhost): ");
+                string host = Console.ReadLine();
+                Console.Write("Enter Username (e.g., postgres): ");
+                string username = Console.ReadLine();
+                Console.Write("Enter Password: ");
+                string password = ReadPassword();
 
-        
+                string connectionString = $"Host={host}; Username={username}; Password={password}";
+
+                if (await IsConnectionValidAsync(connectionString))
+                {
+                    return connectionString;
+                }
+                else
+                {
+                    Console.WriteLine("\nInvalid connection string or unable to connect to the database. Please try again.\n");
+                    Console.ReadKey();
+                    Console.Clear();
+                }
+            }
+        }
+
+        public static async Task<bool> IsConnectionValidAsync(string connectionString)
+        {
+            try
+            {
+                using (var con = new NpgsqlConnection(connectionString))
+                {
+                    await con.OpenAsync();
+                    await con.CloseAsync();
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"\nError: {ex.Message}");
+                return false;
+            }
+        }
+
+        public static string GetHostFromConnectionString(string connectionString)
+        {
+            var hostPart = connectionString.Split(';')[0];
+            return hostPart.Split('=')[1];
+        }
+
+        public static string GetUsernameFromConnectionString(string connectionString)
+        {
+            var usernamePart = connectionString.Split(';')[1];
+            return usernamePart.Split('=')[1];
+        }
+
+        public static string GetPasswordFromConnectionString(string connectionString)
+        {
+            var passwordPart = connectionString.Split(';')[2];
+            return passwordPart.Split('=')[1];
+        }
     }
 }

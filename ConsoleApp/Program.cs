@@ -10,15 +10,13 @@ namespace ConsoleApp
         static async Task Main(string[] args)
         {
             List<Table> tables = new List<Table>();
-            Console.Write("Enter Host (e.g., localhost): ");
-            string host = Console.ReadLine();
-            Console.Write("Enter Username (e.g., postgres): ");
-            string username = Console.ReadLine();
-            Console.Write("Enter Password: ");
-            string password = ManagementService.ReadPassword();
-            string connectionString = $"Host={host}; Username={username}; Password={password}";
+            List<Column> columns = new List<Column>();
+            List<Row> rows = new List<Row>();
+            string connectionString = await ManagementService.GetValidConnectionStringAsync();
             string newDatabaseName = "NewDatabase";
-            string newDbConnectionString = $"Host={host}; Database={newDatabaseName}; Username={username}; Password={password}";
+            string newDbConnectionString = $"Host={ManagementService.GetHostFromConnectionString(connectionString)}; " +
+                $"Database={newDatabaseName}; Username={ManagementService.GetUsernameFromConnectionString(connectionString)}; " +
+                $"Password={ManagementService.GetPasswordFromConnectionString(connectionString)}";
 
             Console.WriteLine("\nConnection string created: " + connectionString);
             await ManagementService.CreateDatabaseAsync(connectionString, newDatabaseName);
@@ -27,7 +25,7 @@ namespace ConsoleApp
 
         MainMenu:
             Console.Clear();
-            Console.WriteLine("WELCOME TO YOUR DATABASE");
+            Console.WriteLine($"{newDatabaseName}"); 
             Console.WriteLine("1. Manage Tables");
             Console.WriteLine("2. Manage Columns");
             Console.WriteLine("3. Manage Rows");
@@ -38,7 +36,7 @@ namespace ConsoleApp
             switch (option)
             {
                 case 1:
-                    await TableMenu(newDbConnectionString, tables);
+                    await ManagementService.TableMenu(newDbConnectionString, tables);
                     goto MainMenu;
 
                 case 2:
@@ -60,10 +58,6 @@ namespace ConsoleApp
 
         Exit:
             Console.WriteLine("Exiting...");
-            Console.ReadKey();
         }
-
-
-        
     }
 }

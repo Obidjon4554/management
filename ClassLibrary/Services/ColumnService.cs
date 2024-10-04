@@ -12,9 +12,9 @@ namespace ClassLibrary
         {
             Console.Clear();
             Console.WriteLine("MANAGE COLUMNS");
-            await SelectTableAsync(connectionString, tables);
+            await SelectTableForColumnAsync(connectionString,tables);
         }
-        public static async Task ManageColumnsMenu(NpgsqlConnection con, string tableName)
+        public static async Task ManageColumnsMenuAsync(NpgsqlConnection con, string tableName)
         {
             while (true)
             {
@@ -87,13 +87,22 @@ namespace ClassLibrary
             string query = $"SELECT column_name, data_type FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = @TableName";
             var columns = await con.QueryAsync<dynamic>(query, new { TableName = tableName });
 
-            Console.WriteLine("Columns:");
-            Console.WriteLine("==========================");
+            var columnList = new List<Column>();
+            int id = 1;
+
             foreach (var column in columns)
             {
-                Console.WriteLine($"{column.column_name} ({column.data_type})");
+                columnList.Add(new Column { Id = id++, Name = $"{column.column_name} ({column.data_type})" });
+            }
+
+            Console.WriteLine("Columns:");
+            Console.WriteLine("==========================");
+            foreach (var col in columnList)
+            {
+                Console.WriteLine($"ID: {col.Id}, Name: {col.Name}");
             }
         }
+
 
         public static async Task UpdateColumnInTableAsync(NpgsqlConnection con, string tableName)
         {
@@ -102,25 +111,62 @@ namespace ClassLibrary
 
             await ViewColumnsFromTableAsync(con, tableName);
 
-            Console.Write("Enter the column name you want to update: ");
-            string oldColumnName = Console.ReadLine();
+         
+            string checkQuery = $"SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = @TableName";
+            var columns = await con.QueryAsync<dynamic>(checkQuery, new { TableName = tableName });
 
-            Console.Write("Enter the new column name: ");
-            string newColumnName = Console.ReadLine();
-
-            Console.Write("Enter the new data type (or press Enter to keep it the same): ");
-            string newDataType = Console.ReadLine();
-
-            string renameColumnCmd = $"ALTER TABLE {tableName} RENAME COLUMN {oldColumnName} TO {newColumnName}";
-            await con.ExecuteAsync(renameColumnCmd);
-
-            if (!string.IsNullOrWhiteSpace(newDataType))
+            
+            var columnDict = new Dictionary<int, string>();         
+            int id = 1;
+            foreach (var column in columns)
             {
-                string alterDataTypeCmd = $"ALTER TABLE {tableName} ALTER COLUMN {newColumnName} TYPE {newDataType}";
-                await con.ExecuteAsync(alterDataTypeCmd);
+                columnDict.Add(id++, column.column_name);
             }
 
-            Console.WriteLine($"Column '{oldColumnName}' updated successfully to '{newColumnName}'!");
+            int columnId;
+            do
+            {
+                Console.Write("Enter the column ID you want to update: ");
+                if (!int.TryParse(Console.ReadLine(), out columnId) || !columnDict.ContainsKey(columnId))
+                {
+                    Console.WriteLine("Invalid column ID. Please enter a valid column ID.");
+                }
+            } while (!columnDict.ContainsKey(columnId));
+
+            string oldColumnName = columnDict[columnId];
+
+            string newColumnName;
+            do
+            {
+                Console.Write("Enter the new column name: ");
+                newColumnName = Console.ReadLine()?.Trim();
+
+                if (string.IsNullOrEmpty(newColumnName))
+                {
+                    Console.WriteLine("Column name cannot be empty.");
+                }
+            } while (string.IsNullOrEmpty(newColumnName));
+
+            Console.Write("Enter the new data type (or press Enter to keep it the same): ");
+            string newDataType = Console.ReadLine()?.Trim();
+
+            try
+            {
+                string renameColumnCmd = $"ALTER TABLE {tableName} RENAME COLUMN {oldColumnName} TO {newColumnName}";
+                await con.ExecuteAsync(renameColumnCmd);
+
+                if (!string.IsNullOrWhiteSpace(newDataType))
+                {
+                    string alterDataTypeCmd = $"ALTER TABLE {tableName} ALTER COLUMN {newColumnName} TYPE {newDataType}";
+                    await con.ExecuteAsync(alterDataTypeCmd);
+                }
+
+                Console.WriteLine($"Column '{oldColumnName}' updated successfully to '{newColumnName}'!");
+            }
+            catch (Npgsql.PostgresException ex)
+            {
+                Console.WriteLine($"An error occurred: {ex.Message}");
+            }
         }
 
         public static async Task DeleteColumnFromTableAsync(NpgsqlConnection con, string tableName)
@@ -130,13 +176,97 @@ namespace ClassLibrary
 
             await ViewColumnsFromTableAsync(con, tableName);
 
-            Console.Write("Enter the column name you want to delete: ");
-            string columnName = Console.ReadLine();
+            string checkQuery = $"SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = @TableName";
+            var columns = await con.QueryAsync<dynamic>(checkQuery, new { TableName = tableName });
 
-            string deleteColumnCmd = $"ALTER TABLE {tableName} DROP COLUMN {columnName}";
-            await con.ExecuteAsync(deleteColumnCmd);
+            var columnDict = new Dictionary<int, string>();
+            int id = 1;
+            foreach (var column in columns)
+            {
+                columnDict.Add(id++, column.column_name);
+            }
 
-            Console.WriteLine($"Column '{columnName}' deleted successfully!");
+            int columnId;
+            do
+            {
+                Console.Write("Enter the column ID you want to delete: ");
+                if (!int.TryParse(Console.ReadLine(), out columnId) || !columnDict.ContainsKey(columnId))
+                {
+                    Console.WriteLine("Invalid column ID. Please enter a valid column ID.");
+                }
+            } while (!columnDict.ContainsKey(columnId));
+
+            string columnName = columnDict[columnId];
+
+            try
+            {
+                string deleteColumnCmd = $"ALTER TABLE {tableName} DROP COLUMN {columnName}";
+                await con.ExecuteAsync(deleteColumnCmd);
+
+                Console.WriteLine($"Column '{columnName}' deleted successfully!");
+            }
+            catch (Npgsql.PostgresException ex)
+            {
+                Console.WriteLine($"An error occurred: {ex.Message}");
+            }
         }
+
+        public static async Task SelectTableForColumnAsync(string connectionString, List<Table> tables)
+        {
+            using (var con = new NpgsqlConnection(connectionString))
+            {
+                await con.OpenAsync();
+                tables.Clear();
+                string selectQuery = "SELECT table_name FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = 'public'";
+                var tableNames = await con.QueryAsync<string>(selectQuery);
+
+                int count = 0;
+                foreach (var name in tableNames)
+                {
+                    count++;
+                    tables.Add(new Table { Id = count, Name = name });
+                }
+
+                while (true)
+                {
+                    Console.Clear();
+                    Console.WriteLine(" List of Tables ");
+                    Console.WriteLine("====================");
+
+                    foreach (var table in tables)
+                    {
+                        Console.WriteLine($"{table.Id}. {table.Name}");
+                    }
+
+                    Console.WriteLine($"{tables.Count + 1}. Back to Main Menu");
+                    Console.Write("Please choose a table by its number: ");
+
+                    if (!int.TryParse(Console.ReadLine(), out int choice) || choice < 1 || choice > tables.Count + 1)
+                    {
+                        Console.WriteLine("Oops! Invalid table number. Please try again.");
+                        Console.ReadKey();
+                        continue;
+                    }
+
+                    if (choice == tables.Count + 1)
+                    {
+                        return;
+                    }
+
+                    var selectedTable = tables.Find(c => c.Id == choice);
+                    if (selectedTable != null)
+                    {
+                        ManageColumnsMenuAsync(con,selectedTable.Name);
+                    }
+                    else
+                    {
+                        Console.WriteLine("Oops! Invalid  number. Please try again.");
+                        Console.ReadKey();
+                    }
+                }
+            }
+        }
+
+
     }
 }

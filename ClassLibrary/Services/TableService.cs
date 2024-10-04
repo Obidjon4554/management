@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
 using Npgsql;
@@ -10,44 +11,48 @@ namespace ClassLibrary
     {
         public static async Task TableMenu(string connectionString, List<Table> tables)
         {
+            TableMenu:
             Console.Clear();
             Console.WriteLine("MANAGE TABLES");
             Console.WriteLine("1. Create Table");
-            Console.WriteLine("2. Select Table");
+            Console.WriteLine("2. View Tables");
             Console.WriteLine("3. Update Table");
             Console.WriteLine("4. Delete Table");
             Console.WriteLine("5. Back to Main Menu");
             Console.Write("Choose an option: ");
-            var tableOption = int.Parse(Console.ReadLine());
 
+            if (!int.TryParse(Console.ReadLine(), out var tableOption))
+            {
+                Console.WriteLine("Invalid input. Please enter a number.");
+                return;
+            }
             switch (tableOption)
             {
                 case 1:
                     await CreateTableAsync(connectionString, tables);
-                    break;
-
+                    goto TableMenu;
                 case 2:
-                    await SelectTableAsync(connectionString, tables);
-                    break;
+                    await ViewAllTablesAsync(connectionString);
+                    goto TableMenu;
 
                 case 3:
                     await UpdateTableAsync(connectionString, tables);
-                    break;
-
+                    goto TableMenu;
                 case 4:
                     await DeleteTableAsync(connectionString, tables);
-                    break;
-
+                    goto TableMenu;
                 case 5:
-                    return;
-
+                    break;
                 default:
                     Console.WriteLine("Invalid option. Please choose again.");
-                    break;
+                    goto TableMenu;
             }
         }
+
         public static async Task CreateTableAsync(string connectionString, List<Table> tables)
         {
+            Console.Clear();
+
             using (var con = new NpgsqlConnection(connectionString))
             {
                 await con.OpenAsync();
@@ -67,12 +72,13 @@ namespace ClassLibrary
 
                 await con.ExecuteAsync(createTableQuery);
                 Console.WriteLine($"Table '{newTable}' created successfully.");
-                await SelectTableAsync(connectionString, tables);
             }
         }
 
         public static async Task UpdateTableAsync(string connectionString, List<Table> tables)
         {
+            Console.Clear();
+
             using (var con = new NpgsqlConnection(connectionString))
             {
                 await con.OpenAsync();
@@ -108,13 +114,10 @@ namespace ClassLibrary
                     return;
                 }
 
-                foreach (var table in tables)
+                if (tables.Exists(t => t.Name.Equals(newTableName, StringComparison.OrdinalIgnoreCase)))
                 {
-                    if (table.Name.Equals(newTableName, StringComparison.OrdinalIgnoreCase))
-                    {
-                        Console.WriteLine("This table already exists!");
-                        return;
-                    }
+                    Console.WriteLine("This table already exists!");
+                    return;
                 }
 
                 string updateQuery = $"ALTER TABLE {tableName} RENAME TO {newTableName};";
@@ -126,6 +129,7 @@ namespace ClassLibrary
 
         public static async Task DeleteTableAsync(string connectionString, List<Table> tables)
         {
+            Console.Clear();
             using (var con = new NpgsqlConnection(connectionString))
             {
                 await con.OpenAsync();
@@ -158,105 +162,41 @@ namespace ClassLibrary
             }
         }
 
-        public static async Task SelectTableAsync(string connectionString, List<Table> tables)
+        public static async Task ViewAllTablesAsync(string connectionString)
         {
             using (var con = new NpgsqlConnection(connectionString))
             {
                 await con.OpenAsync();
-                tables.Clear();
-                string selectQuery = "SELECT table_name FROM INFORMATION_SCHEMA.TABLES WHERE table_schema = 'public'";
-                var tableNames = await con.QueryAsync<string>(selectQuery);
 
-                int count = 0;
-                foreach (var name in tableNames)
+                string tablesQuery = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';";
+                var tables = await con.QueryAsync<string>(tablesQuery);
+
+                if (!tables.Any())
                 {
-                    count++;
-                    tables.Add(new Table { Id = count, Name = name });
+                    Console.WriteLine("No tables found.");
+                    return;
                 }
 
-                while (true)
-                {
-                    Console.Clear();
-                    Console.WriteLine(" List of Tables ");
-                    Console.WriteLine("====================");
-
-                    foreach (var table in tables)
-                    {
-                        Console.WriteLine($"{table.Id}. {table.Name}");
-                    }
-
-                    Console.WriteLine($"{tables.Count + 1}. Back to Main Menu");
-                    Console.Write("Please choose a table by its number: ");
-
-                    if (!int.TryParse(Console.ReadLine(), out int choice) || choice < 1 || choice > tables.Count + 1)
-                    {
-                        Console.WriteLine("Oops! Invalid table number. Please try again.");
-                        Console.ReadKey();
-                        continue;
-                    }
-
-                    if (choice == tables.Count + 1)
-                    {
-                        return;
-                    }
-
-                    var selectedTable = tables.Find(c => c.Id == choice);
-                    if (selectedTable != null)
-                    {
-                        await TableCrudMenuAsync(con, selectedTable.Name);
-                    }
-                    else
-                    {
-                        Console.WriteLine("Oops! Invalid table number. Please try again.");
-                        Console.ReadKey();
-                    }
-                }
-            }
-        }
-
-        public static async Task TableCrudMenuAsync(NpgsqlConnection con, string tableName)
-        {
-            while (true)
-            {
                 Console.Clear();
-                Console.WriteLine($"Managing Table: {tableName}");
-                Console.WriteLine("1. View Table");
-                Console.WriteLine("2. Manage Columns");
-                Console.WriteLine("3. Manage Rows");
-                Console.WriteLine("4. Back to Main Menu");
-                Console.Write("Choose an option: ");
-
-                if (!int.TryParse(Console.ReadLine(), out int option) || option < 1 || option > 4)
+                Console.WriteLine("Tables:");
+                Console.WriteLine("==========================");
+                for (int i = 0; i < tables.Count(); i++)
                 {
-                    Console.WriteLine("Invalid option. Please choose again.");
-                    Console.ReadKey();
-                    continue;
+                    Console.WriteLine($"ID: {i + 1}, Name: {tables.ElementAt(i)}");
                 }
 
-                switch (option)
+                int tableId;
+                do
                 {
-                    case 1:
-                        await ViewTableAsync(con, tableName);
-                        Console.WriteLine("Press any key to return...");
-                        Console.ReadKey();
-                        break;
-                    case 2:
-                        await ManageColumnsMenu(con, tableName);
-                        break;
-                    case 3:
-                        await ManageRowsMenuAsync(con, tableName);
-                        break;
-                    case 4:
-                        return;
-                    default:
-                        Console.WriteLine("Invalid option. Please choose again.");
-                        Console.ReadKey();
-                        break;
-                }
+                    Console.Write("Select a table ID to view data: ");
+                } while (!int.TryParse(Console.ReadLine(), out tableId) || tableId < 1 || tableId > tables.Count());
+
+                string selectedTable = tables.ElementAt(tableId - 1);
+                await ViewTableDataAsync(con, selectedTable);
             }
         }
 
-        public static async Task ViewTableAsync(NpgsqlConnection con, string tableName)
+        private static async Task ViewTableDataAsync(NpgsqlConnection con, string tableName)
         {
             Console.Clear();
             Console.WriteLine($"Viewing data in {tableName}");
@@ -264,15 +204,26 @@ namespace ClassLibrary
             string selectQuery = $"SELECT * FROM {tableName}";
             var rows = await con.QueryAsync(selectQuery);
 
-            Console.WriteLine("Columns:");
-            foreach (var row in rows)
+            if (rows == null || !rows.AsList().Any())
             {
-                foreach (var col in (IDictionary<string, object>)row)
-                {
-                    Console.Write($"{col.Key}: {col.Value}  ");
-                }
-                Console.WriteLine();
+                Console.WriteLine("No data found in this table.");
             }
+            else
+            {
+                Console.WriteLine("Data:");
+                foreach (var row in rows)
+                {
+                    foreach (var col in (IDictionary<string, object>)row)
+                    {
+                        Console.Write($"{col.Key}: {col.Value}  ");
+                    }
+                    Console.WriteLine();
+                }
+            }
+
+            Console.WriteLine("Press any key to return to the main menu...");
+            Console.ReadKey();
         }
+
     }
 }
