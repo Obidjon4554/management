@@ -82,12 +82,8 @@ namespace ClassLibrary
             using (var con = new NpgsqlConnection(connectionString))
             {
                 await con.OpenAsync();
-                Console.WriteLine("Existing tables:");
 
-                foreach (var table in tables)
-                {
-                    Console.WriteLine($"Id: {table.Id}, Name: {table.Name}");
-                }
+await                ViewAllTablesAsync(connectionString);
 
                 Console.Write("Choose table ID for the update: ");
                 if (!int.TryParse(Console.ReadLine(), out int tableId))
@@ -133,12 +129,9 @@ namespace ClassLibrary
             using (var con = new NpgsqlConnection(connectionString))
             {
                 await con.OpenAsync();
-                Console.WriteLine("Existing tables:");
 
-                foreach (var table in tables)
-                {
-                    Console.WriteLine($"Id: {table.Id}, Name: {table.Name}");
-                }
+                await ViewAllTablesAsync(connectionString);
+
 
                 Console.Write("Enter the ID of the Table to delete: ");
                 if (!int.TryParse(Console.ReadLine(), out int tableId))
