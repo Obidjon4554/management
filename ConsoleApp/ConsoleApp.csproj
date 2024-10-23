@@ -92,18 +92,19 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Handlers\OneHandler.cs" />
+    <Compile Include="Handlers\FiveHandler.cs" />
+    <Compile Include="Handlers\TenHandler.cs" />
+    <Compile Include="Handlers\TwentyHandler.cs" />
+    <Compile Include="Handlers\FiftyHandler.cs" />
+    <Compile Include="Handlers\OneHundredHandler.cs" />
+    <Compile Include="IHandler.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\ClassLibrary\ClassLibrary.csproj">
-      <Project>{7f6ac45c-bfc2-422b-bd8b-c5658f8aab90}</Project>
-      <Name>ClassLibrary</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
